@@ -1,0 +1,2 @@
+# Keep Python files LF so the shebang works on Linux
+*.py text eol=lf
