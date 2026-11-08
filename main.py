@@ -12,29 +12,15 @@ COMMAND_SUCCESS = 0
 EXIT_SUCCESS = 0
 EXIT_FAILURE = 1
 
-# Finds a MAC address (6 hex pairs joined by ":") inside ifconfig output.
-MAC_SEARCH_PATTERN = r"[0-9a-fA-F]{2}(:[0-9a-fA-F]{2}){5}"
+# A MAC address: 6 hex pairs joined by ":". Used with re.search to find
+# one inside ifconfig output, and with re.fullmatch to validate input.
+MAC_PATTERN = r"[0-9a-fA-F]{2}(:[0-9a-fA-F]{2}){5}"
+MAC_SEPARATOR = ":"
+HEX_BASE = 16
 
-# --- Part 2: Validation and comparison ---
-#
-# TODO 10: Write is_valid_mac(mac) returning True/False.
-#   - Format: 6 hex pairs separated by ":". The whole string must
-#     match, not just part of it. Store the pattern as a constant.
-#   - Unicast: convert the first pair from hex to int and check its
-#     lowest bit. Which bitwise operator tests one bit? Which value
-#     must it have?
-#
-# TODO 11: Call is_valid_mac in get_arguments and use parser.error with
-#   a specific message. Check: -m 01:00:00:00:00:00 and
-#   -m zz:11:22:33:44:55 are rejected before ifconfig runs.
-#
-# TODO 12: Make the final comparison ignore upper/lower case. Convert
-#   the case in one place only.
-#
-# TODO 13: Commit "fix: validate MAC input and compare case-insensitively",
-#   body explaining the bug (uppercase MAC reported as failure even
-#   though the change worked).
-#
+# Lowest bit of the first byte: 1 means multicast, 0 means unicast.
+MULTICAST_BIT = 0x01
+
 # --- Part 3: Tests (in a new file, test_main.py) ---
 #
 # TODO 14: Create test_main.py next to main.py (TODO 1 makes importing
@@ -100,21 +86,39 @@ def get_current_mac_address(interface):
         FileNotFoundError: If the ifconfig program is not installed.
     """
     ifconfig_output = subprocess.check_output(["ifconfig", interface]).decode()
-    current_mac_search_result = re.search(MAC_SEARCH_PATTERN, ifconfig_output)
+    current_mac_search_result = re.search(MAC_PATTERN, ifconfig_output)
     if current_mac_search_result:
         return current_mac_search_result.group(0)
     else:
         return None
+
+def is_valid_mac(mac):
+    """Check whether a string is a usable unicast MAC address.
+
+    Args:
+        mac: The MAC address to check, e.g. "00:11:22:33:44:55".
+
+    Returns:
+        True if the whole string is 6 hex pairs joined by ":" and the
+        first byte has its multicast bit cleared, otherwise False.
+    """
+    if not re.fullmatch(MAC_PATTERN, mac):
+        return False
+    first_byte = int(mac.split(MAC_SEPARATOR)[0], HEX_BASE)
+    return (first_byte & MULTICAST_BIT) == 0
 
 def get_arguments():
     """Parse the command-line options.
 
     Returns:
         The parsed options, with the attributes "interface" and
-        "new_mac".
+        "new_mac". "new_mac" is converted to lowercase, the same case
+        ifconfig prints, so the final comparison ignores the case the
+        user typed.
 
     Exits the program with an error message (status 2) if either
-    option is missing.
+    option is missing or the MAC address is not a valid unicast
+    address.
     """
     parser = optparse.OptionParser()
     parser.add_option("-i", "--interface", dest="interface", help="Interface to change MAC address")
@@ -124,6 +128,10 @@ def get_arguments():
         parser.error("[-] Please specify the interface to change MAC address, use --help for more info.")
     elif not options.new_mac:
         parser.error("[-] Please specify the new MAC address. use --help for more info.")
+    elif not is_valid_mac(options.new_mac):
+        parser.error(f"[-] Invalid MAC address '{options.new_mac}'. Use 6 hex pairs separated by ':' "
+                     "(e.g. 00:11:22:33:44:55), and the first pair must be even (unicast).")
+    options.new_mac = options.new_mac.lower()
     return options
 
 def change_mac(interface, new_mac):
