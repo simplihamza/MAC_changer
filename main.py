@@ -21,26 +21,6 @@ HEX_BASE = 16
 # Lowest bit of the first byte: 1 means multicast, 0 means unicast.
 MULTICAST_BIT = 0x01
 
-# --- Part 3: Tests (in a new file, test_main.py) ---
-#
-# TODO 14: Create test_main.py next to main.py (TODO 1 makes importing
-#   main safe).
-#
-# TODO 15: Test is_valid_mac first. Valid: lowercase, uppercase, mixed.
-#   Invalid: too short, wrong separator, non-hex letters, multicast
-#   first byte.
-#
-# TODO 16: Test the command functions by mocking subprocess with
-#   unittest.mock.patch. Patch main.subprocess, not subprocess itself.
-#   Fake ifconfig output with and without a MAC, make check_output
-#   raise each exception from TODO 4, and make call return a non-zero
-#   code to check that change_mac reports failure.
-#
-# TODO 17: Run "python -m unittest" on Windows. Everything should pass
-#   without root or Linux; if the real ifconfig runs, a mock is missing.
-#
-# TODO 18: Commit "test: add unit tests for validation and commands".
-#
 # --- Part 4: --random option ---
 #
 # TODO 19: Write generate_random_mac() returning a string. Which two
