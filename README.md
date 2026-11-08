@@ -29,9 +29,15 @@ the address again to check whether the change worked.
   it matches the requested one
 - Prints a clear error message instead of a traceback when the interface
   does not exist or `ifconfig` is not installed
-- Exits with status `0` on success, `1` on failure and `2` for invalid or
-  missing options, so it can be used from shell scripts
-- Unit tests for validation, random MAC generation and the `ifconfig`
+- Exits with a status code that shell scripts can check:
+
+  | Code | Meaning |
+  |------|---------|
+  | `0` | MAC address changed and verified |
+  | `1` | `ifconfig` failed, the interface was not found, or the new MAC did not match |
+  | `2` | Missing or invalid options |
+
+- 17 unit tests for validation, random MAC generation and the `ifconfig`
   commands, which run without root, Linux or `ifconfig`
 
 ## How to Run
@@ -40,10 +46,12 @@ Requirements:
 
 - Linux with `ifconfig` available (on most distros it comes from the
   `net-tools` package)
-- Python 3.6 or newer (the script uses f-strings)
+- Python 3 (the script uses f-strings, so 3.6 or newer); tested with
+  Python 3.11 on Kali Linux
 - Root privileges, since changing a MAC address requires them
+- No third-party packages; everything is in the standard library
 
-Run:
+Set a specific MAC address:
 
 ```bash
 sudo python3 main.py -i eth0 -m 00:11:22:33:44:55
@@ -67,12 +75,15 @@ python3 main.py --help
 Example output:
 
 ```
-[+] Current MAC address: 08:00:27:aa:bb:cc
-[+] Changing MAC address for eth0 to 00:11:22:33:44:55
-[+] MAC address successfully changed to the requested MAC address 00:11:22:33:44:55.
+[+] Current MAC address: 00:11:22:33:44:55
+[+] Changing MAC address for eth0 to 00:11:22:33:44:aa
+[+] MAC address successfully changed to the requested MAC address 00:11:22:33:44:aa.
 ```
 
-Run the tests (works on any OS, no root needed):
+(Here the address was passed as `00:11:22:33:44:AA`; the script lowercases
+it to match how `ifconfig` prints MAC addresses.)
+
+Run the tests from the project folder (works on any OS, no root needed):
 
 ```bash
 python -m unittest -v
@@ -86,6 +97,11 @@ python -m unittest -v
 - The case-insensitive comparison works by lowercasing the input, which
   relies on `ifconfig` printing MAC addresses in lowercase (as net-tools
   does).
+- Running without root privileges has not been tested on Linux yet. The
+  code treats a failed `ifconfig` command as a failure and exits with `1`,
+  but this case has not been checked on a real machine.
+- `main()` and the option parsing in `get_arguments()` have no unit tests;
+  they have only been checked by running the script manually.
 - The change is not permanent; the original MAC address returns after a
   reboot.
 - Uses `optparse`, which is deprecated in favour of `argparse`.
