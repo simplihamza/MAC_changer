@@ -29,13 +29,6 @@ LOCALLY_ADMINISTERED_BIT = 0x02
 MAC_BYTE_COUNT = 6
 MAX_BYTE_VALUE = 0xFF
 
-# --- Part 5: Docs and push ---
-#
-# TODO 25: Test on a real Linux machine/VM: valid MAC, uppercase MAC,
-#   --random, bad interface name, running without sudo. Then git push.
-#
-# =====================================================================
-
 def get_current_mac_address(interface):
     """Return the current MAC address of a network interface.
 
