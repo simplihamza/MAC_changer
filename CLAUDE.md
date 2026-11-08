@@ -92,7 +92,7 @@ tested, patch `main.subprocess.check_output` / `.call` individually:
 patching the whole module turns `subprocess.CalledProcessError` in its
 `except` clause into a mock, which raises `TypeError`.
 
-## In progress
-The comment block at the top of `main.py` holds the remaining numbered
-TODO: TODO 25 (manual testing on Linux, then push). Finished TODOs are
-deleted from that block.
+## Status
+There are no open TODOs in the code. Running the script without root
+privileges has not been tested on Linux yet; README.md lists this under
+Known Issues, so update both if that case gets tested.
