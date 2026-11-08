@@ -2,6 +2,7 @@
 
 import subprocess
 import optparse
+import random
 import re
 import sys
 
@@ -20,24 +21,14 @@ HEX_BASE = 16
 
 # Lowest bit of the first byte: 1 means multicast, 0 means unicast.
 MULTICAST_BIT = 0x01
+# Second-lowest bit of the first byte: 1 means locally administered (set
+# by software), 0 means globally unique (assigned by the manufacturer).
+LOCALLY_ADMINISTERED_BIT = 0x02
 
-# --- Part 4: --random option ---
-#
-# TODO 19: Write generate_random_mac() returning a string. Which two
-#   bits of the first byte must be set, and to what ("locally
-#   administered" and "unicast")? Generate a random first byte, then
-#   set/clear those bits with bitwise operators. Name the masks as
-#   constants.
-#
-# TODO 20: Add a -r/--random option in get_arguments, used instead of
-#   -m, never together with it. optparse can't enforce that, so check
-#   it yourself: what happens with both, or neither?
-#
-# TODO 21: Test it: call generate_random_mac many times in a loop and
-#   assert is_valid_mac accepts every result.
-#
-# TODO 22: Commit "feat: add --random option".
-#
+# Size of a MAC address and the largest value one byte can hold.
+MAC_BYTE_COUNT = 6
+MAX_BYTE_VALUE = 0xFF
+
 # --- Part 5: Docs and push ---
 #
 # TODO 23: Update README.md: remove fixed Known Issues, add --random
@@ -87,27 +78,51 @@ def is_valid_mac(mac):
     first_byte = int(mac.split(MAC_SEPARATOR)[0], HEX_BASE)
     return (first_byte & MULTICAST_BIT) == 0
 
+def generate_random_mac():
+    """Generate a random locally administered unicast MAC address.
+
+    The first byte has its locally administered bit set (so it cannot
+    clash with a manufacturer-assigned address) and its multicast bit
+    cleared (so a network card can use it). The other bytes are fully
+    random.
+
+    Returns:
+        The MAC address as a lowercase string, e.g. "06:3f:a1:00:9c:42".
+    """
+    mac_bytes = [random.randint(0, MAX_BYTE_VALUE) for _ in range(MAC_BYTE_COUNT)]
+    mac_bytes[0] = (mac_bytes[0] | LOCALLY_ADMINISTERED_BIT) & ~MULTICAST_BIT
+    return MAC_SEPARATOR.join(f"{byte:02x}" for byte in mac_bytes)
+
 def get_arguments():
     """Parse the command-line options.
 
-    Returns:
-        The parsed options, with the attributes "interface" and
-        "new_mac". "new_mac" is converted to lowercase, the same case
-        ifconfig prints, so the final comparison ignores the case the
-        user typed.
+    The new MAC comes from exactly one of -m/--mac (typed by the user)
+    or -r/--random (generated with generate_random_mac).
 
-    Exits the program with an error message (status 2) if either
-    option is missing or the MAC address is not a valid unicast
-    address.
+    Returns:
+        The parsed options, with the attributes "interface", "new_mac"
+        and "random_mac". "new_mac" is converted to lowercase, the same
+        case ifconfig prints, so the final comparison ignores the case
+        the user typed.
+
+    Exits the program with an error message (status 2) if the
+    interface is missing, if both or neither of -m and -r are given,
+    or if the MAC address is not a valid unicast address.
     """
     parser = optparse.OptionParser()
     parser.add_option("-i", "--interface", dest="interface", help="Interface to change MAC address")
-    parser.add_option("-m", "--mac", dest="new_mac", help="New MAC address")
+    parser.add_option("-m", "--mac", dest="new_mac", help="New MAC address (cannot be used with -r)")
+    parser.add_option("-r", "--random", dest="random_mac", action="store_true", default=False,
+                      help="Use a random MAC address instead of -m")
     (options, arguments) = parser.parse_args()
     if not options.interface:
         parser.error("[-] Please specify the interface to change MAC address, use --help for more info.")
+    elif options.new_mac and options.random_mac:
+        parser.error("[-] Use either -m or -r, not both.")
+    elif options.random_mac:
+        options.new_mac = generate_random_mac()
     elif not options.new_mac:
-        parser.error("[-] Please specify the new MAC address. use --help for more info.")
+        parser.error("[-] Please specify the new MAC address with -m, or use -r for a random one.")
     elif not is_valid_mac(options.new_mac):
         parser.error(f"[-] Invalid MAC address '{options.new_mac}'. Use 6 hex pairs separated by ':' "
                      "(e.g. 00:11:22:33:44:55), and the first pair must be even (unicast).")

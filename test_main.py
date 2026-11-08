@@ -46,6 +46,10 @@ DOWN_CALL = call(["ifconfig", INTERFACE, "down"])
 SET_MAC_CALL = call(["ifconfig", INTERFACE, "hw", "ether", NEW_MAC])
 UP_CALL = call(["ifconfig", INTERFACE, "up"])
 
+# How many random MACs to generate. Enough to hit every allowed first
+# byte many times, while the test still runs in well under a second.
+RANDOM_SAMPLE_COUNT = 1000
+
 
 class TestIsValidMac(unittest.TestCase):
     """Tests for main.is_valid_mac."""
@@ -77,6 +81,29 @@ class TestIsValidMac(unittest.TestCase):
     def test_multicast_first_byte_is_invalid(self):
         """A well-formed MAC with an odd (multicast) first byte is rejected."""
         self.assertFalse(main.is_valid_mac(MULTICAST_MAC))
+
+
+class TestGenerateRandomMac(unittest.TestCase):
+    """Tests for main.generate_random_mac.
+
+    The output is random, so each test checks many samples. subTest
+    reports the exact MAC that failed instead of stopping at the first.
+    """
+
+    def test_random_macs_are_valid(self):
+        """Every generated MAC is accepted by is_valid_mac."""
+        for _ in range(RANDOM_SAMPLE_COUNT):
+            mac = main.generate_random_mac()
+            with self.subTest(mac=mac):
+                self.assertTrue(main.is_valid_mac(mac))
+
+    def test_random_macs_are_locally_administered(self):
+        """Every generated MAC has the locally administered bit set."""
+        for _ in range(RANDOM_SAMPLE_COUNT):
+            mac = main.generate_random_mac()
+            first_byte = int(mac.split(main.MAC_SEPARATOR)[0], main.HEX_BASE)
+            with self.subTest(mac=mac):
+                self.assertTrue(first_byte & main.LOCALLY_ADMINISTERED_BIT)
 
 
 @patch("main.subprocess")
