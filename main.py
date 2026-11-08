@@ -31,12 +31,6 @@ MAX_BYTE_VALUE = 0xFF
 
 # --- Part 5: Docs and push ---
 #
-# TODO 23: Update README.md: remove fixed Known Issues, add --random
-#   and how to run the tests, add new lessons to What I Learned.
-#
-# TODO 24: Update CLAUDE.md (architecture, test command, new option).
-#   Commit "docs: update README and CLAUDE.md".
-#
 # TODO 25: Test on a real Linux machine/VM: valid MAC, uppercase MAC,
 #   --random, bad interface name, running without sudo. Then git push.
 #
