@@ -14,8 +14,15 @@ change worked.
 - Reads and prints the interface's current MAC address before changing it
 - Changes the MAC address by bringing the interface down, setting the new
   hardware address, and bringing it back up
+- Checks the result of each `ifconfig` command; if setting the address
+  fails, the interface is still brought back up so it is not left switched
+  off
 - Verifies the result by reading the MAC address again and reporting whether
   it matches the requested one
+- Prints a clear error message instead of a traceback when the interface
+  does not exist or `ifconfig` is not installed
+- Exits with status `0` on success and `1` on failure (`2` for missing
+  options), so it can be used from shell scripts
 
 ## How to Run
 
@@ -58,9 +65,6 @@ Example output:
 - The success check is case-sensitive. `ifconfig` prints MAC addresses in
   lowercase, so passing an uppercase address (e.g. `00:11:22:33:44:AA`) can
   report failure even when the change actually worked.
-- If the interface name does not exist, `ifconfig` fails and the script stops
-  with an unhandled `CalledProcessError` traceback instead of a friendly
-  message.
 - The change is not permanent; the original MAC address returns after a
   reboot.
 - Uses `optparse`, which is deprecated in favour of `argparse`.
@@ -74,3 +78,16 @@ Example output:
 - Using regular expressions (`re.search`) to extract a MAC address from
   command output
 - Verifying that an action actually succeeded instead of assuming it did
+- Checking command return codes, and making sure a failed step does not
+  leave the system in a broken state (the interface switched off)
+- Catching `CalledProcessError` and `FileNotFoundError` to show friendly
+  errors instead of tracebacks
+- Using exit codes with `sys.exit` so other programs can tell success from
+  failure
+- Using an `if __name__ == "__main__":` guard so the file can be imported
+  without running
+- Decoding command output with `.decode()`: calling `str()` on bytes gives
+  the text of the bytes object (`b'...'` with literal `\n`), not the real
+  output
+- Using a regex character class (`[0-9a-fA-F]`) instead of `\w` to match
+  only hex digits
